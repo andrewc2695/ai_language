@@ -29,6 +29,7 @@ export const generateSentenceFn = createServerFn({ method: "POST" }).handler(
       system: "You are a master of Cantonese. Provide a natural sentence and track used word details.",
       prompt: `
       Generate one complete, natural Cantonese practice sentence using ONLY the provided vocabulary.
+      Generate sentences that are 10 words or longer.
       
       Focus word: 
       ${formatWord(focusWord)}

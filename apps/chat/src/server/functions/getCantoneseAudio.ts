@@ -26,7 +26,6 @@ export const getCantoneseAudio = createServerFn({ method: "POST" })
 
     // 1. Construct SSML (the same format we tested in the console)
     const ssml = formatJyutpingForPolly(jyutping);
-    console.log(ssml)
     const command = new SynthesizeSpeechCommand({
       Engine: "neural",
       LanguageCode: "yue-CN", // Crucial: Hiujin uses yue-CN

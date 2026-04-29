@@ -1,5 +1,12 @@
 import { google } from "@ai-sdk/google";
-import { convertToModelMessages, streamText, tool, type UIMessage } from "ai";
+import {
+  convertToModelMessages,
+  generateText,
+  Output,
+  streamText,
+  tool,
+  type UIMessage,
+} from "ai";
 import { z } from "zod";
 import { ONLY_SENTENCE_AGENT } from "../functions/consts";
 import { updateWordProgressQuery } from "../tools/updateWordProgress";
@@ -67,25 +74,60 @@ const gradingFeedbackSystemPrompt = (
   Explain whether the user's response was right or wrong and why. Keep the response concise and user-facing.
   Do not include JSON or any machine-readable grading object in this streamed response.
 
-  Before you finish, call recordGradingResult exactly once with a wordResults object containing every expected word keyed by word ID.
+  Before you finish, you must call recordGradingResult exactly once with a wordResults array containing every expected word.
   Mark a word correct only if the user's response translated and used that word with the correct meaning.`;
+
+const structuredGradingSystemPrompt = (
+  expectedSentence: string,
+  usedWords: SentenceMetadata["usedWords"],
+) => `You are a master of Cantonese. Grade the user's English translation of this Cantonese practice sentence.
+
+Expected Cantonese sentence in Jyutping:
+${expectedSentence}
+
+Words the user was expected to translate:
+${JSON.stringify(usedWords, null, 2)}
+
+Return one wordResults entry for every expected word. Mark a word correct only if the user's response translated and used that word with the correct meaning.`;
+
+const wordGradingSchema = z.object({
+  id: z.number(),
+  jyutping: z.string(),
+  english: z.string(),
+  correct: z.boolean(),
+  reason: z.string(),
+});
+
+type GradingResult = {
+  wordResults: z.infer<typeof wordGradingSchema>[];
+};
 
 const gradingResultSchema = z.object({
   wordResults: z
-    .record(
-      z.string(),
-      z.object({
-        id: z.number(),
-        jyutping: z.string(),
-        english: z.string(),
-        correct: z.boolean(),
-        reason: z.string(),
-      }),
-    )
-    .describe("Every expected word keyed by word ID."),
+    .array(wordGradingSchema)
+    .describe("One grading result for every expected word."),
 });
 
-type GradingResult = z.infer<typeof gradingResultSchema>;
+const generateStructuredGrade = async ({
+  expectedSentence,
+  usedWords,
+  userResponse,
+}: {
+  expectedSentence: string;
+  usedWords: SentenceMetadata["usedWords"];
+  userResponse: string;
+}) => {
+  const { output } = await generateText({
+    model: google("gemini-2.5-flash"),
+    output: Output.object({
+      schema: gradingResultSchema,
+    }),
+    system: structuredGradingSystemPrompt(expectedSentence, usedWords),
+    prompt: userResponse,
+  });
+
+  return output;
+};
 
 const updateProgressFromStructuredGrade = ({
   usedWords,
@@ -101,7 +143,9 @@ const updateProgressFromStructuredGrade = ({
   updateWordProgressQuery(
     usedWords.map((word) => ({
       id: word.id,
-      success: gradingResult.wordResults[String(word.id)]?.correct ?? false,
+      success:
+        gradingResult.wordResults.find((result) => result.id === word.id)
+          ?.correct ?? false,
     })),
   );
 };
@@ -116,6 +160,13 @@ export async function handleChat(request: Request): Promise<Response> {
 
     const modelMessages = await convertToModelMessages(messages);
     const { expectedSentence, usedWords } = getPracticeContext(messages);
+    const userResponse = getText(messages.at(-1));
+
+    if (usedWords.length === 0) {
+      console.warn(
+        "No practice words were found for this grading request; progress will not be updated.",
+      );
+    }
 
     const result = streamText({
       model: google("gemini-2.5-flash"),
@@ -137,9 +188,18 @@ export async function handleChat(request: Request): Promise<Response> {
             ...toolResults,
             ...steps.flatMap((step) => step.toolResults),
           ];
-          const gradingResult = allToolResults.find(
+          const toolGradingResult = allToolResults.find(
             (toolResult) => toolResult.toolName === "recordGradingResult",
           )?.output as GradingResult | undefined;
+          const gradingResult =
+            toolGradingResult ??
+            (usedWords.length > 0
+              ? await generateStructuredGrade({
+                  expectedSentence,
+                  usedWords,
+                  userResponse,
+                })
+              : undefined);
 
           updateProgressFromStructuredGrade({
             usedWords,

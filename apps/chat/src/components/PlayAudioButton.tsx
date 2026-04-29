@@ -23,7 +23,7 @@ export const PlayAudioButton = ({ jyutping }: PlayAudioButtonProps) => {
       }
 
       const audio = new Audio(nextAudioDataUri);
-      audio.playbackRate = 0.9;
+      audio.playbackRate = 1
 
       await audio.play();
     } catch (err) {

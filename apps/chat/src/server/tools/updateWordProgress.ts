@@ -8,6 +8,7 @@ export type WordProgressUpdate = {
 };
 
 export function updateWordProgressQuery(words: WordProgressUpdate[]) {
+  console.log("updateWordProgressQuery", words)
   const db = getDb();
 
   console.log(`[updateWordProgress] Updating ${words.length} words`);

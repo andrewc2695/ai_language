@@ -135,6 +135,7 @@ function MessageRenderingSection({
                 const sentencePart = message.parts.find(
                   (part) =>
                     isTextUIPart(part) &&
+                    "metadata" in part &&
                     (part.metadata as Record<string, unknown> | undefined)
                       ?.agent === ONLY_SENTENCE_AGENT,
                 );
