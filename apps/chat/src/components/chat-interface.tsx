@@ -10,6 +10,7 @@ import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { generateSentenceFn } from "@/server/functions/generateSentence";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ONLY_SENTENCE_AGENT } from "@/server/functions/consts";
 
 export function ChatInterface() {
   const { messages, setMessages, sendMessage, status, error } = useChat({
@@ -27,7 +28,7 @@ export function ChatInterface() {
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          parts: [{ type: "text", text: result.sentence, usedWords: result.usedWords }],
+          parts: [{ type: "text", text: result.sentence, metadata: { agent: ONLY_SENTENCE_AGENT, usedWords: result.usedWords } }],
         },
       ]);
     },
