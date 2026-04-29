@@ -11,6 +11,7 @@ import { generateSentenceFn } from "@/server/functions/generateSentence";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ONLY_SENTENCE_AGENT } from "@/server/functions/consts";
+import { PlayAudioButton } from "./PlayAudioButton";
 
 export function ChatInterface() {
   const { messages, setMessages, sendMessage, status, error } = useChat({
@@ -130,6 +131,17 @@ function MessageRenderingSection({
                   ) : null,
                 )}
               </div>
+              {(() => {
+                const sentencePart = message.parts.find(
+                  (part) =>
+                    isTextUIPart(part) &&
+                    (part.metadata as Record<string, unknown> | undefined)
+                      ?.agent === ONLY_SENTENCE_AGENT,
+                );
+                return sentencePart && isTextUIPart(sentencePart) ? (
+                  <PlayAudioButton jyutping={sentencePart.text} />
+                ) : null;
+              })()}
             </li>
           ))}
         </ol>
