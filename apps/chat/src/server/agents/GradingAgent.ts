@@ -1,6 +1,6 @@
 import { google } from "@ai-sdk/google";
 import { Experimental_Agent as Agent, stepCountIs } from "ai";
-import { updateWordProgress } from "../tools/updateWordProgress";
+import { updateWordProgress } from "../tools/updateWordProgress"
 
 const systemPrompt = `You are a master of Cantonese. You fully understand Cantonese grammar, sentence structure, and vocabulary.
 Your goal is to grade the user's translation of a sentence and provide feedback on whether it is correct or incorrect.

@@ -1,7 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx next build:*)"
+      "Bash(npx next build:*)",
+      "WebSearch",
+      "WebFetch(domain:tanstack.com)",
+      "WebFetch(domain:blog.logrocket.com)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:ai-sdk.dev)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm ls:*)",
+      "Bash(pnpm dev)",
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(node -e:*)"
     ]
   }
 }

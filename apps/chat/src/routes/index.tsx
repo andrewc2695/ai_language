@@ -1,7 +1,12 @@
-import { ChatInterface } from "../components/chat-interface";
-import { Dictionary } from "../components/dictionary";
+import { createFileRoute } from '@tanstack/react-router'
+import { ChatInterface } from '../components/chat-interface'
+import { Dictionary } from '../components/dictionary'
 
-export default function Home() {
+export const Route = createFileRoute('/')({
+  component: Home,
+})
+
+function Home() {
   return (
     <div className="flex h-screen">
       <div className="flex-[3] overflow-hidden">
@@ -11,5 +16,5 @@ export default function Home() {
         <Dictionary />
       </aside>
     </div>
-  );
+  )
 }

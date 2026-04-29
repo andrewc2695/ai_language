@@ -1,8 +1,7 @@
-"use client";
-
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { searchWords } from "@/server/functions/searchWords";
 
 interface Word {
   id: number;
@@ -30,10 +29,10 @@ export function Dictionary() {
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/words?q=${encodeURIComponent(query.trim())}`);
-        if (res.ok) {
-          setResults(await res.json());
-        }
+        const words = await searchWords({ data: { query: query.trim() } });
+        setResults(words as Word[]);
+      } catch {
+        // ignore search errors
       } finally {
         setLoading(false);
       }

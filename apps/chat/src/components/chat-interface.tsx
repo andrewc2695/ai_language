@@ -1,5 +1,3 @@
-"use client";
-
 import { useChat } from "@ai-sdk/react";
 import {
   DefaultChatTransport,
@@ -7,6 +5,7 @@ import {
   type ChatStatus,
   type UIMessage,
 } from "ai";
+import { useMutation } from "@tanstack/react-query";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,7 +16,33 @@ export function ChatInterface() {
       api: "/api/chat",
     }),
   });
-  const [generating, setGenerating] = useState(false);
+
+  const generateSentenceMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/sentence", { method: "POST" });
+      console.log(res)
+      if (!res.ok) {
+        throw new Error("Failed to generate sentence");
+      }
+
+      const { sentence } = (await res.json()) as { sentence?: string };
+      if (!sentence?.trim()) {
+        throw new Error("No sentence was generated");
+      }
+
+      return sentence.trim();
+    },
+    onSuccess: (sentence) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          parts: [{ type: "text", text: sentence }],
+        },
+      ]);
+    },
+  });
 
   const handleSubmit = async (message: string) => {
     const trimmedMessage = message.trim();
@@ -30,47 +55,17 @@ export function ChatInterface() {
   };
 
   const generateSentence = async () => {
-    if (generating || status === "submitted" || status === "streaming") return;
-    setGenerating(true);
-
-    try {
-      const res = await fetch("/api/sentence", { method: "POST" });
-      if (!res.ok || !res.body) {
-        throw new Error("Failed to generate sentence");
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let text = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        text += decoder.decode(value, { stream: true });
-      }
-
-      text += decoder.decode();
-
-      if (text.trim()) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            parts: [{ type: "text", text: text.trim() }],
-          },
-        ]);
-      }
-    } finally {
-      setGenerating(false);
-    }
+    if (generateSentenceMutation.isPending || status === "submitted" || status === "streaming") return;
+    generateSentenceMutation.mutate();
   };
 
+  const generating = generateSentenceMutation.isPending;
   const isBusy = generating || status === "submitted" || status === "streaming";
+  const displayError = error ?? generateSentenceMutation.error ?? undefined;
 
   return (
     <main className="flex h-full flex-col gap-4 p-6">
-      <MessageRenderingSection messages={messages} status={status} error={error} generating={generating} />
+      <MessageRenderingSection messages={messages} status={status} error={displayError} generating={generating} />
       <MessageComposer onSubmit={handleSubmit} onGenerate={generateSentence} isBusy={isBusy} />
     </main>
   );
