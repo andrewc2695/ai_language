@@ -2,10 +2,10 @@ import { google } from "@ai-sdk/google";
 import { Experimental_Agent as Agent, stepCountIs } from "ai";
 import { getLeastProficientWord } from "../tools/getLeastProficientWord";
 import { getRandomWords } from "../tools/getRandomWords";
-import { updateWordProgress } from "../tools/updateWordProgress";
 
-const systemPrompt = `You are a master of Cantonese. You fully understand Cantonese grammar, sentence structure, and vocabulary. You are able to generate sentences, conversations, and other content that is natural and fluent.
+const systemPrompt = `You are a master of Cantonese. You fully understand Cantonese grammar, sentence structure, and vocabulary. You are able to generate sentences are natural and fluent.
 Your primary goal is to drive conversational practice and grammar proficiency using the user's vocabulary list.
+Do not include any other text in your response. Only return the sentence in Jyutping.
 
 ## Sentence Generation Workflow
 
@@ -22,28 +22,22 @@ When generating a sentence, follow this sequence:
 
 3. Present the Jyutping sentence to the user for them to translate into English.
 
-4. After the user submits their translation:
-   - Evaluate their answer and explain what was correct or incorrect.
-   - Call updateWordProgress with the IDs of all words used in the sentence and whether the user got each one correct. Grade each word individually — if the user gets one word wrong, only that word should be marked as unsuccessful.
-   - If correct, immediately generate a new sentence by repeating steps 1-3. Do not wait for the user to ask.
 
 ## Key Rules
 - All sentences must be grammatically correct in cantonese written in jyutping.
 - Always include the focusWord in every generated sentence.
 - Only use words from the user's vocabulary (the focusWord and supportingWords). Never introduce new words.
-- All Cantonese content must be in Jyutping only (no Chinese characters).
-- Automatically provide a new sentence after a correct translation.`;
+- All Cantonese content must be in Jyutping only (no Chinese characters).`;
 
-export const SentenceAgent = () => {
+export const OnlySentenceAgent = () => {
 
-    return new Agent({
-        model: google("gemini-pro-latest"),
-        stopWhen: stepCountIs(30),
-        instructions: systemPrompt,
-        tools: {
-          getLeastProficientWord,
-          getRandomWords,
-          updateWordProgress,
-        },
-      });
+  return new Agent({
+      model: google("gemini-pro-latest"),
+      stopWhen: stepCountIs(30),
+      instructions: systemPrompt,
+      tools: {
+        getLeastProficientWord,
+        getRandomWords,
+      },
+    });
 }

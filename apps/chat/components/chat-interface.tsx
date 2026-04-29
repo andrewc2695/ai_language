@@ -7,16 +7,17 @@ import {
   type ChatStatus,
   type UIMessage,
 } from "ai";
-import { type KeyboardEvent, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 export function ChatInterface() {
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, setMessages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({
       api: "/api/chat",
     }),
   });
+  const [generating, setGenerating] = useState(false);
 
   const handleSubmit = async (message: string) => {
     const trimmedMessage = message.trim();
@@ -28,10 +29,49 @@ export function ChatInterface() {
     await sendMessage({ text: trimmedMessage });
   };
 
+  const generateSentence = async () => {
+    if (generating || status === "submitted" || status === "streaming") return;
+    setGenerating(true);
+
+    try {
+      const res = await fetch("/api/sentence", { method: "POST" });
+      if (!res.ok || !res.body) {
+        throw new Error("Failed to generate sentence");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let text = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+      }
+
+      text += decoder.decode();
+
+      if (text.trim()) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            parts: [{ type: "text", text: text.trim() }],
+          },
+        ]);
+      }
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const isBusy = generating || status === "submitted" || status === "streaming";
+
   return (
     <main className="flex h-full flex-col gap-4 p-6">
-      <MessageRenderingSection messages={messages} status={status} error={error} />
-      <MessageComposer onSubmit={handleSubmit} status={status} />
+      <MessageRenderingSection messages={messages} status={status} error={error} generating={generating} />
+      <MessageComposer onSubmit={handleSubmit} onGenerate={generateSentence} isBusy={isBusy} />
     </main>
   );
 }
@@ -40,11 +80,19 @@ function MessageRenderingSection({
   messages,
   status,
   error,
+  generating,
 }: {
   messages: UIMessage[];
   status: ChatStatus;
   error?: Error;
+  generating: boolean;
 }) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, status]);
+
   return (
     <section className="flex-1 overflow-y-auto p-4" aria-label="Messages">
       {messages.length === 0 ? (
@@ -83,30 +131,32 @@ function MessageRenderingSection({
         </ol>
       )}
 
-      {status === "submitted" ? (
-        <p className="mt-3.5 text-sm text-muted-foreground">Thinking...</p>
+      {status === "submitted" || generating ? (
+        <p className="mt-3.5 text-sm text-muted-foreground">{generating ? "Generating sentence..." : "Thinking..."}</p>
       ) : null}
       {error ? (
         <p className="mt-3.5 text-sm text-destructive">{error.message}</p>
       ) : null}
+      <div ref={bottomRef} />
     </section>
   );
 }
 
 function MessageComposer({
   onSubmit,
-  status,
+  onGenerate,
+  isBusy,
 }: {
   onSubmit: (message: string) => Promise<void>;
-  status: ChatStatus;
+  onGenerate: () => Promise<void>;
+  isBusy: boolean;
 }) {
   const [message, setMessage] = useState("");
-  const isSending = status === "submitted" || status === "streaming";
 
   const send = async () => {
-    if (!message.trim() || isSending) return;
-    await onSubmit(message);
+    if (!message.trim() || isBusy) return;
     setMessage("");
+    await onSubmit(message);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -117,23 +167,33 @@ function MessageComposer({
   };
 
   return (
-    <Card className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-end gap-2.5 rounded-2xl p-2.5">
-      <textarea
-        placeholder="Type a message..."
-        rows={1}
-        value={message}
-        onChange={(event) => setMessage(event.target.value)}
-        onKeyDown={handleKeyDown}
-        className="min-h-[44px] max-h-[160px] resize-none border-0 bg-transparent p-3 text-foreground outline-none placeholder:text-muted-foreground"
-      />
+    <div className="flex w-full flex-col gap-2">
+      <Card className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-end gap-2.5 rounded-2xl p-2.5">
+        <textarea
+          placeholder="Type your translation..."
+          rows={1}
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          onKeyDown={handleKeyDown}
+          className="min-h-[44px] max-h-[160px] resize-none border-0 bg-transparent p-3 text-foreground outline-none placeholder:text-muted-foreground"
+        />
+        <Button
+          size="icon-lg"
+          disabled={!message.trim() || isBusy}
+          onClick={send}
+          className="rounded-xl text-xl"
+        >
+          ↑
+        </Button>
+      </Card>
       <Button
-        size="icon-lg"
-        disabled={!message.trim() || isSending}
-        onClick={send}
-        className="rounded-xl text-xl"
+        variant="secondary"
+        disabled={isBusy}
+        onClick={onGenerate}
+        className="w-full rounded-xl"
       >
-        ↑
+        Generate Sentence
       </Button>
-    </Card>
+    </div>
   );
 }
