@@ -1,5 +1,5 @@
 import { convertToModelMessages } from "ai";
-import { SentenceAgent } from "../../agents/SentenceAgent";
+import { GradingAgent } from "../../agents/GradingAgent";
 
 // Note: Using Node.js runtime instead of Edge because SQLite requires Node.js
 // export const runtime = "edge"; // Removed - SQLite needs Node.js runtime
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
     const modelMessages = await convertToModelMessages(messages);
 
-    const agent = SentenceAgent();
+    const agent = GradingAgent();
 
     const result = await agent.stream({
         messages: modelMessages,
