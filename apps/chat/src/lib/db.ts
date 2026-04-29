@@ -4,6 +4,15 @@ import path from "path";
 
 const DB_PATH = path.join(process.cwd(), "words.db");
 
+export type WordRow = {
+  id: number;
+  english: string;
+  jyutping: string;
+  proficiency_level: number;
+  date_last_practiced: string | null;
+  times_practiced: number;
+};
+
 let db: Database.Database | null = null;
 
 export function getDb(): Database.Database {

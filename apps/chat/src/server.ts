@@ -5,14 +5,12 @@ import {
 
 // Import API route handlers
 import { handleChat } from './server/api/chat'
-import { handleSentence } from './server/api/sentence'
 
 const startHandler = createStartHandler(defaultStreamHandler)
 
 // API route mapping
 const apiRoutes: Record<string, (request: Request) => Promise<Response>> = {
   '/api/chat': handleChat,
-  '/api/sentence': handleSentence,
 }
 
 export default {

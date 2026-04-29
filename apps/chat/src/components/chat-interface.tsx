@@ -7,6 +7,7 @@ import {
 } from "ai";
 import { useMutation } from "@tanstack/react-query";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { generateSentenceFn } from "@/server/functions/generateSentence";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -18,27 +19,15 @@ export function ChatInterface() {
   });
 
   const generateSentenceMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/sentence", { method: "POST" });
-      console.log(res)
-      if (!res.ok) {
-        throw new Error("Failed to generate sentence");
-      }
-
-      const { sentence } = (await res.json()) as { sentence?: string };
-      if (!sentence?.trim()) {
-        throw new Error("No sentence was generated");
-      }
-
-      return sentence.trim();
-    },
-    onSuccess: (sentence) => {
+    mutationFn: () => generateSentenceFn(),
+    onSuccess: (result) => {
+      console.log({result});
       setMessages((prev) => [
         ...prev,
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          parts: [{ type: "text", text: sentence }],
+          parts: [{ type: "text", text: result.sentence, usedWords: result.usedWords }],
         },
       ]);
     },
@@ -55,7 +44,12 @@ export function ChatInterface() {
   };
 
   const generateSentence = async () => {
-    if (generateSentenceMutation.isPending || status === "submitted" || status === "streaming") return;
+    if (
+      generateSentenceMutation.isPending ||
+      status === "submitted" ||
+      status === "streaming"
+    )
+      return;
     generateSentenceMutation.mutate();
   };
 
@@ -65,8 +59,17 @@ export function ChatInterface() {
 
   return (
     <main className="flex h-full flex-col gap-4 p-6">
-      <MessageRenderingSection messages={messages} status={status} error={displayError} generating={generating} />
-      <MessageComposer onSubmit={handleSubmit} onGenerate={generateSentence} isBusy={isBusy} />
+      <MessageRenderingSection
+        messages={messages}
+        status={status}
+        error={displayError}
+        generating={generating}
+      />
+      <MessageComposer
+        onSubmit={handleSubmit}
+        onGenerate={generateSentence}
+        isBusy={isBusy}
+      />
     </main>
   );
 }
@@ -99,7 +102,9 @@ function MessageRenderingSection({
           {messages.map((message) => (
             <li
               className={`flex flex-col max-w-[75%] gap-1 ${
-                message.role === "user" ? "self-end items-end" : "self-start items-start"
+                message.role === "user"
+                  ? "self-end items-end"
+                  : "self-start items-start"
               }`}
               key={message.id}
             >
@@ -115,7 +120,10 @@ function MessageRenderingSection({
               >
                 {message.parts.map((part, index) =>
                   isTextUIPart(part) ? (
-                    <p key={`${message.id}-${index}`} className="m-0 [&+p]:mt-2.5">
+                    <p
+                      key={`${message.id}-${index}`}
+                      className="m-0 [&+p]:mt-2.5"
+                    >
                       {part.text}
                     </p>
                   ) : null,
@@ -127,7 +135,9 @@ function MessageRenderingSection({
       )}
 
       {status === "submitted" || generating ? (
-        <p className="mt-3.5 text-sm text-muted-foreground">{generating ? "Generating sentence..." : "Thinking..."}</p>
+        <p className="mt-3.5 text-sm text-muted-foreground">
+          {generating ? "Generating sentence..." : "Thinking..."}
+        </p>
       ) : null}
       {error ? (
         <p className="mt-3.5 text-sm text-destructive">{error.message}</p>

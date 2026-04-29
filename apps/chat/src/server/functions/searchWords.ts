@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getDb } from '../../lib/db'
+import type { WordRow } from '../../lib/db'
 
 export const searchWords = createServerFn({ method: 'GET' })
   .inputValidator((input: { query: string }) => input)
@@ -28,7 +29,7 @@ export const searchWords = createServerFn({ method: 'GET' })
     LIMIT 20
   `
       )
-      .all(pattern, pattern, query, query, `${query}%`, `${query}%`)
+      .all(pattern, pattern, query, query, `${query}%`, `${query}%`) as WordRow[]
 
     return words
   })

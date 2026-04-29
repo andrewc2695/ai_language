@@ -4,6 +4,7 @@ import { GradingAgent } from '../agents/GradingAgent'
 export async function handleChat(request: Request): Promise<Response> {
   try {
     const { messages } = await request.json()
+    console.log('messages', messages[0].parts)
 
     if (!messages || !Array.isArray(messages)) {
       return new Response('Messages must be an array', { status: 400 })

@@ -16,7 +16,7 @@ Your goal is to grade the user's translation of a sentence and provide feedback 
 export const GradingAgent = () => {
 
     return new Agent({
-        model: google("gemini-pro-latest"),
+        model: google("gemini-2.5-flash"),
         stopWhen: stepCountIs(30),
         instructions: systemPrompt,
         tools: {
